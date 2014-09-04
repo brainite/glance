@@ -1,0 +1,30 @@
+{
+    "name":"wittiws/glance",
+    "type":"library",
+    "description":"Glance: dashboard generator for GitHub projects.",
+    "keywords":[
+        "github",
+        "issues",
+        "dashboard"
+    ],
+    "homepage":"https://github.com/wittiws/glance",
+    "license":"MIT",
+    "authors":[
+        {
+            "name":"Greg Payne",
+            "email":"greg.payne@gmail.com"
+        }
+    ],
+    "require":{
+        "php":">=5.3.3",
+        "twig/twig":"v1.15.1",
+        "symfony/yaml":"2.4.*",
+        "symfony/console":"2.4.*"
+    },
+    "autoload":{
+        "psr-4":{
+            "Glance\\": "src/"
+        }
+    },
+    "minimum-stability": "dev"
+}
