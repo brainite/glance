@@ -1,0 +1,27 @@
+defaults:
+  repos:      ["wittiws/glance"]
+  
+  filter:     is:open
+  
+  weights:
+    - filter: label:bug
+      weight: 2
+    - filter: label:wontfix
+      weight: 0
+    - filter: milestone:Alpha
+      weight: 4
+    - filter: comments:10..20
+      weight: 1.5
+    - filter: comments:21..50
+      weight: 2
+    - filter: comments:>50
+      weight: 3
+  
+dashboard:
+  group:  ["assignee"]
+  count:  6
+  output:
+    repo:   wittiws/glance
+    branch: master
+    path:   README.md
+
