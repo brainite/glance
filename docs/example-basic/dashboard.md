@@ -1,4 +1,3 @@
-1. [Get repo name from config file.](https://github.com/cpnporg/glance/issues/4)
-2. [Test bug](https://github.com/cpnporg/glance/issues/3)
-3. [Define a YAML configuration file format](https://github.com/cpnporg/glance/issues/1)
-4. [Installation documentation](https://github.com/cpnporg/glance/issues/2)
+1. [Installation documentation](https://github.com/cpnporg/glance/issues/2)
+2. [Add header/footer support for dashboards](https://github.com/cpnporg/glance/issues/5)
+3. [Enforce configuration for maximum number to display](https://github.com/cpnporg/glance/issues/6)
