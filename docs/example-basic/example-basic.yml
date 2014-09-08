@@ -1,6 +1,11 @@
 defaults:
-  repos:      ["wittiws/glance"]
+  # The token can be set in the configuration file, or it can be provided in the command-line
+  # It is suppressed in this example and must be provided as the --token=X option.
+  # token:      XXXXXXXXXXXXXXX
   
+  repos:      ["cpnporg/glance"]
+  
+  state:      open
   filter:     is:open
   
   weights:
@@ -17,11 +22,19 @@ defaults:
     - filter: comments:>50
       weight: 3
   
-dashboard:
+  
+dashboard_all:
   group:  ["assignee"]
   count:  6
   output:
-    repo:   wittiws/glance
+    repo:   cpnporg/glance
     branch: master
-    path:   README.md
+    path:   docs/example-basic/dashboard.md
 
+#dashboard_user:
+#  vary:   ["assignee"]
+#  count:  20
+#  output:
+#    repo:   wittiws/glance
+#    branch: master
+#    path:   docs/example-basic/user-{{ assignee }}.md

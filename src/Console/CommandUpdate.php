@@ -32,9 +32,96 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
 
     // Locate the configuration.
     $conf_path = $input->getOption('conf');
-    $conf = Yaml::parse($conf_path);
+    $confs = Yaml::parse($conf_path);
     $output->writeln("Conf: $conf_path");
-    var_export($conf);
+
+    // Extract the defaults.
+    if (isset($confs['defaults'])) {
+      $defaults = $confs['defaults'];
+      unset($confs['defaults']);
+    }
+    $defaults = array_merge(array(
+      'filter' => 'is:open',
+    ), (array) $defaults);
+
+    // Get the token for output.
+    $token_override = $input->getOption('token');
+    if (empty($token_override)) {
+      if (is_file(dirname(dirname(__DIR__)) . '/github_token.txt')) {
+        $token_override = trim(file_get_contents(dirname(dirname(__DIR__))
+          . '/github_token.txt'));
+      }
+    }
+
+    // Initialize the client.
+    $client = new \Github\Client(new \Github\HttpClient\CachedHttpClient(array(
+      'cache_dir' => '/tmp/github-api-cache'
+    )));
+    if (!empty($token_override)) {
+      $output->writeln("Authenticating via token");
+      $client->authenticate($token_override, \Github\Client::AUTH_HTTP_TOKEN);
+    }
+
+    // Iterate through the configurations.
+    foreach ($confs as $conf_id => $conf) {
+
+      // Track the issues as:
+      // $issues[$issue['id']] = $issue;
+      // $weights[$issue['id']] = 1;
+      $issues = array();
+      $weights = array();
+
+      $conf = array_merge($defaults, (array) $conf);
+      foreach ($conf['repos'] as $repo) {
+        list($search_user, $search_repo) = explode('/', $repo, 2);
+        foreach ($conf['weights'] as $weight) {
+          // Get the issues for each weight/filter.
+          $filter = "$conf[filter] $weight[filter]";
+          $results = $client->api('issue')->find($search_user, $search_repo, 'open', $filter);
+          $output->writeln(sizeof($results['issues'])
+            . " results for '$filter'");
+          foreach ($results['issues'] as $result) {
+            $id = $result['html_url'];
+
+            if (!isset($issues[$id])) {
+              $issues[$id] = $result;
+              $weights[$id] = 1;
+            }
+            $weights[$id] *= $weight['weight'];
+          }
+        }
+      }
+    }
+
+    $contents = '';
+    arsort($weights);
+    $i = 0;
+    foreach ($weights as $id => $weight) {
+      $link = (++$i) . ". [" . $issues[$id]['title'] . "]("
+        . $issues[$id]['html_url'] . ")";
+      $contents .= $link . "\n";
+    }
+
+    // If the output is a repo, then
+    if (isset($conf['output']['repo'])) {
+      $commitMessage = "Updated by Glance";
+      $committer = NULL;
+      list($output_user, $output_repo) = explode('/', $conf['output']['repo'], 2);
+      if ($client->api('repo')->contents()->show($output_user, $output_repo, $conf['output']['path'])) {
+        $oldFile = $client->api('repo')->contents()->show($output_user, $output_repo, $conf['output']['path'], $conf['output']['branch']);
+        $checkOld = preg_replace("@\s+@s", '', $oldFile['content']);
+        $checkNew = base64_encode($contents);
+        if ($checkOld === $checkNew) {
+          $output->writeln("No change to file content");
+        }
+        else {
+          $fileInfo = $client->api('repo')->contents()->update($output_user, $output_repo, $conf['output']['path'], $contents, $commitMessage, $oldFile['sha'], $conf['output']['branch'], $committer);
+        }
+      }
+      else {
+        $fileInfo = $client->api('repo')->contents()->create($output_user, $output_repo, $conf['output']['path'], $contents, $commitMessage, $conf['output']['branch'], $committer);
+      }
+    }
   }
 
 }
