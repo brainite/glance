@@ -46,6 +46,9 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
 
     // Get the token for output.
     $token_override = $input->getOption('token');
+    if (empty($token_override) && isset($defaults['token'])) {
+      $token_override = $defaults['token'];
+    }
     if (empty($token_override)) {
       if (is_file(dirname(dirname(__DIR__)) . '/github_token.txt')) {
         $token_override = trim(file_get_contents(dirname(dirname(__DIR__))
