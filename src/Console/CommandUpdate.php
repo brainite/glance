@@ -57,6 +57,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
     $client = new \Github\Client(new \Github\HttpClient\CachedHttpClient(array(
       'cache_dir' => '/tmp/github-api-cache'
     )));
+    // $client = new \Github\Client();
     if (!empty($token_override)) {
       $output->writeln("Authenticating via token");
       $client->authenticate($token_override, \Github\Client::AUTH_HTTP_TOKEN);
@@ -77,10 +78,11 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
         foreach ($conf['weights'] as $weight) {
           // Get the issues for each weight/filter.
           $filter = "$conf[filter] $weight[filter]";
-          $results = $client->api('issue')->find($search_user, $search_repo, 'open', $filter);
-          $output->writeln(sizeof($results['issues'])
+          // $results = $client->api('issue')->findItems($search_user, $search_repo, 'open', $filter);
+          $results = $client->api('search')->find('issues', "repo:$repo $filter");
+          $output->writeln(sizeof($results['items'])
             . " results for '$filter'");
-          foreach ($results['issues'] as $result) {
+          foreach ($results['items'] as $result) {
             $id = $result['html_url'];
 
             if (!isset($issues[$id])) {
