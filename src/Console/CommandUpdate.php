@@ -117,6 +117,9 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
     arsort($weights);
     $i = 0;
     foreach ($weights as $id => $weight) {
+      if ($weight <= 0) {
+        continue;
+      }
       $link = (++$i) . ". [" . $issues[$id]['title'] . "]("
         . $issues[$id]['html_url'] . ")";
       $contents .= $link . "\n";
