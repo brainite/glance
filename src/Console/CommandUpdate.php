@@ -56,6 +56,21 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
       }
     }
 
+    // Build the replacements.
+    $tr = array();
+    $month = (int) strftime('%m');
+    for ($i = 0; $i <= 11; ++$i) {
+      if ($i) {
+        if ($month + $i > 12) {
+          $month -= 12;
+        }
+        $tr["{{month_$i}}"] = sprintf('%02d', $month + $i);
+      }
+      else {
+        $tr["{{month}}"] = sprintf('%02d', $month);
+      }
+    }
+
     // Initialize the client.
     $client = new \Github\Client(new \Github\HttpClient\CachedHttpClient(array(
       'cache_dir' => '/tmp/github-api-cache'
@@ -81,8 +96,8 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
         foreach ($conf['weights'] as $weight) {
           // Get the issues for each weight/filter.
           $filter = "$conf[filter] $weight[filter]";
-          // $results = $client->api('issue')->findItems($search_user, $search_repo, 'open', $filter);
-          $results = $client->api('search')->find('issues', "repo:$repo $filter");
+          $filter = strtr($filter, $tr);
+          $results = $client->api('search')->issues("repo:$repo $filter");
           $output->writeln(sizeof($results['items'])
             . " results for '$filter'");
           foreach ($results['items'] as $result) {
