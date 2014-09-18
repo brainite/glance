@@ -1,5 +1,6 @@
-1. [Installation documentation](https://github.com/cpnporg/glance/issues/2)
-2. [Add header/footer support for dashboards](https://github.com/cpnporg/glance/issues/5)
+1. [Add header/footer support for dashboards](https://github.com/cpnporg/glance/issues/5)
+2. [Installation documentation](https://github.com/cpnporg/glance/issues/2)
 3. [Enforce configuration for maximum number to display](https://github.com/cpnporg/glance/issues/6)
 4. [Extract logic from CommandUpdate into a separate class.](https://github.com/cpnporg/glance/issues/8)
 5. [Show labels and milestones in the final report](https://github.com/cpnporg/glance/issues/9)
+6. [Add basic webhook functionality](https://github.com/cpnporg/glance/issues/10)
