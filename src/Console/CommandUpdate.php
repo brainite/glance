@@ -73,7 +73,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
 
     // Initialize the client.
     $client = new \Github\Client(new \Github\HttpClient\CachedHttpClient(array(
-      'cache_dir' => '/tmp/github-api-cache'
+      'cache_dir' => '/tmp/github-api-cache-' . get_current_user(),
     )));
     // $client = new \Github\Client();
     if (!empty($token_override)) {
