@@ -2,5 +2,6 @@
 2. [Installation documentation](https://github.com/cpnporg/glance/issues/2)
 3. [Enforce configuration for maximum number to display](https://github.com/cpnporg/glance/issues/6)
 4. [Extract logic from CommandUpdate into a separate class.](https://github.com/cpnporg/glance/issues/8)
-5. [Show labels and milestones in the final report](https://github.com/cpnporg/glance/issues/9)
-6. [Add basic webhook functionality](https://github.com/cpnporg/glance/issues/10)
+5. [Add basic webhook functionality](https://github.com/cpnporg/glance/issues/10)
+6. [Show labels and milestones in the final report](https://github.com/cpnporg/glance/issues/9)
+7. [Optimize for zero-multiplier filters based on labels](https://github.com/cpnporg/glance/issues/11)
