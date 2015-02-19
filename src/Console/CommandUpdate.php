@@ -84,13 +84,17 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
         $output->writeln("Authenticating via token");
         $client->authenticate($token_override, \Github\Client::AUTH_HTTP_TOKEN);
       }
+      else {
+        $output->writeln("<error>Error: You must provide an authentication token.</error>");
+        return;
+      }
 
       // Iterate through the configurations.
       foreach ($confs as $conf_id => $conf) {
 
         // Track the issues as:
-        // $issues[$issue['id']] = $issue;
-        // $weights[$issue['id']] = 1;
+        // $issues[$issue['html_url']] = $issue;
+        // $weights[$issue['html_url']] = 1;
         $issues = array();
         $weights = array();
 
