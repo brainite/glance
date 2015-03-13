@@ -154,16 +154,35 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
         }
       }
 
+      // Round the weights before sorting.
+      foreach ($weights as &$weight) {
+        $weight = round($weight, 1);
+      }
+
+      // Sort the ids by weight and then by issue title.
+      $ids = array_keys($weights);
+      uasort($ids, function($a, $b) use ($weights, $issues) {
+        if ($weights[$a] > $weights[$b]) {
+          return -1;
+        }
+        if ($weights[$a] < $weights[$b]) {
+          return 1;
+        }
+        return strcasecmp($issues[$a]['title'], $issues[$b]['title']);
+      });
+
+      // Build the contents.
       $contents = '';
-      arsort($weights);
       $i = 0;
-      foreach ($weights as $id => $weight) {
+      foreach ($ids as $id) {
+        $weight = $weights[$id];
         if ($weight <= 1) {
           continue;
         }
         $link = (++$i) . ". [" . $issues[$id]['title'] . "]("
           . $issues[$id]['html_url'] . ")";
         $contents .= $link . "\n";
+        // echo $weight . ' = ' . $link . "\n";
       }
 
       // If the output is a repo, then
