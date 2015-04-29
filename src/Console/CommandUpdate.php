@@ -17,6 +17,7 @@ use Symfony\Component\Yaml\Yaml;
 
 class CommandUpdate extends \Symfony\Component\Console\Command\Command {
   protected $client;
+  protected $output;
 
   protected function configure() {
     $this->setName('glance:update');
@@ -28,6 +29,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
   }
 
   protected function execute(InputInterface $input, OutputInterface $output) {
+    $this->output = &$output;
     $output->getFormatter()->setStyle('h1', new OutputFormatterStyle('black', 'yellow', array(
       'bold',
     )));
@@ -44,6 +46,10 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
     }
     $defaults = array_merge(array(
       'filter' => 'is:open',
+      'inherit_from' => NULL,
+      'inherit_filter' => NULL,
+      'header' => '',
+      'footer' => '',
     ), (array) $defaults);
 
     // Get the token for output.
@@ -90,128 +96,137 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
       }
 
       // Iterate through the configurations.
+      $cache = array();
       foreach ($confs as $conf_id => $conf) {
+        $conf = array_merge($defaults, (array) $conf);
 
         // Track the issues as:
         // $issues[$issue['html_url']] = $issue;
         // $weights[$issue['html_url']] = 1;
-        $issues = array();
-        $weights = array();
+        if (isset($conf['inherit_from'])) {
+          $issues = $cache[$conf['inherit_from']]['issues'];
+          $weights = $cache[$conf['inherit_from']]['weights'];
+        }
+        else {
+          $issues = array();
+          $weights = array();
 
-        $conf = array_merge($defaults, (array) $conf);
-        foreach ($conf['repos'] as $repo) {
-          list($search_user, $search_repo) = explode('/', $repo, 2);
+          foreach ($conf['repos'] as $repo) {
+            list($search_user, $search_repo) = explode('/', $repo, 2);
 
-          // Get a list of all issues.
-          $items = $this->getItems($conf['filter'], $repo);
-          foreach ($items as $item) {
-            $id = $item['html_url'];
-            $issues[$id] = $item;
-            $weights[$id] = 1;
-          }
-
-          // Process the weights.
-          foreach ($conf['weights'] as $weight) {
-            $filter = trim(strtr($weight['filter'], $tr));
-
-            // Process the filters
-            if (preg_match('@label:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
-              // Handle a basic label filter
-              $items = array();
-              foreach ($issues as $issue) {
-                foreach ($issue['labels'] as $label) {
-                  if (strcasecmp($arr[1], $label['name']) === 0) {
-                    $items[] = $issue;
-                    break;
-                  }
-                }
-              }
-              $output->writeln(sizeof($items) . " results for basic label '$filter'");
-            }
-            elseif (preg_match('@milestone:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
-              // Handle a basic milestone filter
-              $items = array();
-              foreach ($issues as $issue) {
-                if (isset($issue['milestone']) && strcasecmp($arr[1], $issue['milestone']['title']) === 0) {
-                  $items[] = $issue;
-                }
-              }
-              $output->writeln(sizeof($items) . " results for basic milestone '$filter'");
-            }
-            else {
-              // If this is not handled internally, use the search.
-              $filter = "$conf[filter] $filter";
-              $items = $this->getItems($filter, $repo);
-              $output->writeln(sizeof($items) . " results for '$filter'");
-            }
-
-            // Apply the weighting.
+            // Get a list of all issues.
+            $items = $this->getAllItems($conf['filter'], $repo);
             foreach ($items as $item) {
               $id = $item['html_url'];
-              $weights[$id] *= $weight['weight'];
+              $issues[$id] = $item;
+              $weights[$id] = 1;
+            }
+
+            // Process the weights.
+            foreach ($conf['weights'] as $weight) {
+              $filter = trim(strtr($weight['filter'], $tr));
+              $items = $this->getFilteredItems($conf, $issues, $filter, $repo);
+
+              // Apply the weighting.
+              foreach ($items as $item) {
+                $id = $item['html_url'];
+                $weights[$id] *= $weight['weight'];
+              }
             }
           }
-        }
-      }
 
-      // Round the weights before sorting.
-      foreach ($weights as &$weight) {
-        $weight = round($weight, 1);
-      }
-
-      // Sort the ids by weight and then by issue title.
-      $ids = array_keys($weights);
-      uasort($ids, function($a, $b) use ($weights, $issues) {
-        if ($weights[$a] > $weights[$b]) {
-          return -1;
-        }
-        if ($weights[$a] < $weights[$b]) {
-          return 1;
-        }
-        return strcasecmp($issues[$a]['title'], $issues[$b]['title']);
-      });
-
-      // Build the contents.
-      $contents = '';
-      $i = 0;
-      foreach ($ids as $id) {
-        $weight = $weights[$id];
-        if ($weight <= 1) {
-          continue;
-        }
-        $link = (++$i) . ". [" . $issues[$id]['title'] . "]("
-          . $issues[$id]['html_url'] . ")";
-        $contents .= $link . "\n";
-        // echo $weight . ' = ' . $link . "\n";
-      }
-
-      // If the output is a repo, then
-      if (isset($conf['output']['repo'])) {
-        $commitMessage = "Updated by Glance";
-        $committer = NULL;
-        list($output_user, $output_repo) = explode('/', $conf['output']['repo'], 2);
-        if ($client->api('repo')->contents()->show($output_user, $output_repo, $conf['output']['path'])) {
-          $oldFile = $client->api('repo')->contents()->show($output_user, $output_repo, $conf['output']['path'], $conf['output']['branch']);
-          $checkOld = preg_replace("@\s+@s", '', $oldFile['content']);
-          $checkNew = base64_encode($contents);
-          if ($checkOld === $checkNew) {
-            $output->writeln("No change to file content");
+          // Round the weights before sorting.
+          foreach ($weights as &$weight) {
+            $weight = round($weight, 1);
           }
-          else {
-            $fileInfo = $client->api('repo')->contents()->update($output_user, $output_repo, $conf['output']['path'], $contents, $commitMessage, $oldFile['sha'], $conf['output']['branch'], $committer);
+
+          // Sort the ids by weight and then by issue title.
+          $ids = array_keys($weights);
+          uasort($ids, function ($a, $b) use ($weights, $issues) {
+            if ($weights[$a] > $weights[$b]) {
+              return -1;
+            }
+            if ($weights[$a] < $weights[$b]) {
+              return 1;
+            }
+            return strcasecmp($issues[$a]['title'], $issues[$b]['title']);
+          });
+
+          $cache[$conf_id] = array(
+            'issues' => $issues,
+            'weights' => $weights,
+          );
+        }
+
+        // Build the contents.
+        $contents = '';
+        $i = 0;
+        if (isset($conf['inherit_from']) && isset($conf['inherit_filter'])) {
+          $items = $this->getFilteredItems($conf, $issues, $conf['inherit_filter'], $repo);
+          $visible_issues = array();
+          foreach ($items as $item) {
+            $id = $item['html_url'];
+            $visible_issues[$id] = TRUE;
           }
         }
         else {
-          $fileInfo = $client->api('repo')->contents()->create($output_user, $output_repo, $conf['output']['path'], $contents, $commitMessage, $conf['output']['branch'], $committer);
+          $visible_issues = $issues;
+        }
+        foreach ($ids as $id) {
+          $weight = $weights[$id];
+          if ($weight <= 1 || !isset($visible_issues[$id])) {
+            continue;
+          }
+          $link = (++$i) . ". [" . $issues[$id]['title'] . "]("
+            . $issues[$id]['html_url'] . ")";
+          $contents .= $link . "\n";
+          // echo $weight . ' = ' . $link . "\n";
+        }
+
+        // Add headers/footers.
+        if ($conf['header']) {
+          $contents = trim($conf['header']) . "\n\n" . $contents;
+        }
+        if ($conf['footer']) {
+          $contents = trim($contents) . "\n\n" . $conf['footer'];
+        }
+
+        // If the output is a repo, then
+        if (isset($conf['output']['repo'])) {
+          $commitMessage = "Updated by Glance";
+          $committer = NULL;
+          list($output_user, $output_repo) = explode('/', $conf['output']['repo'], 2);
+          if ($client->api('repo')->contents()->show($output_user, $output_repo, $conf['output']['path'])) {
+            $oldFile = $client->api('repo')->contents()->show($output_user, $output_repo, $conf['output']['path'], $conf['output']['branch']);
+            $checkOld = preg_replace("@\s+@s", '', $oldFile['content']);
+            $checkNew = base64_encode($contents);
+            if ($checkOld === $checkNew) {
+              $output->writeln("No change to file content");
+            }
+            else {
+              $fileInfo = $client->api('repo')->contents()->update($output_user, $output_repo, $conf['output']['path'], $contents, $commitMessage, $oldFile['sha'], $conf['output']['branch'], $committer);
+            }
+          }
+          else {
+            // Files are created in the catch clause
+          }
         }
       }
+    } catch (\Github\Exception\RuntimeException $e) {
+      if ($e->getCode() == 404) {
+        $fileInfo = $client->api('repo')->contents()->create($output_user, $output_repo, $conf['output']['path'], $contents, $commitMessage, $conf['output']['branch'], $committer);
+      }
+      else {
+        $output->writeln("GitHub exception (" . $e->getCode() . "): " . $e->getMessage());
+      }
     } catch (\Exception $e) {
-      $output->writeln("GitHub exception: " . $e->getMessage());
+      $output->writeln("GitHub exception (" . $e->getCode() . "): " . $e->getMessage());
+      $output->writeln(get_class($e));
       return;
     }
   }
 
-  private function getItems($filter, $repo) {
+  private function getAllItems($filter = 'is:open', $repo) {
     static $api = NULL;
     if (!isset($api)) {
       $api = $this->client->api('search');
@@ -220,6 +235,56 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
 
     $results = $api->issues("repo:$repo $filter");
     return (array) $results['items'];
+  }
+
+  private function getFilteredItems($conf, $issues, $filter, $repo = NULL) {
+    $items = array();
+
+    // Process the filters
+    if (preg_match('@label:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+      // Handle a basic label filter
+      $items = array();
+      foreach ($issues as $issue) {
+        foreach ($issue['labels'] as $label) {
+          if (strcasecmp($arr[1], $label['name']) === 0) {
+            $items[] = $issue;
+            break;
+          }
+        }
+      }
+      $this->output->writeln(sizeof($items) . " results for basic label '$filter'");
+    }
+    elseif (preg_match('@milestone:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+      // Handle a basic milestone filter
+      $items = array();
+      foreach ($issues as $issue) {
+        if (isset($issue['milestone'])
+          && strcasecmp($arr[1], $issue['milestone']['title']) === 0) {
+          $items[] = $issue;
+        }
+      }
+      $this->output->writeln(sizeof($items)
+        . " results for basic milestone '$filter'");
+    }
+    elseif (preg_match('@assignee:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+      // Handle a basic milestone filter
+      $items = array();
+      foreach ($issues as $issue) {
+        if (isset($issue['assignee'])
+          && strcasecmp($arr[1], $issue['assignee']['login']) === 0) {
+          $items[] = $issue;
+        }
+      }
+      $this->output->writeln(sizeof($items)
+        . " results for basic assignee '$filter'");
+    }
+    else {
+      // If this is not handled internally, use the search.
+      $filter = "$conf[filter] $filter";
+      $items = $this->getAllItems($filter, $repo);
+      $this->output->writeln(sizeof($items) . " results for '$filter'");
+    }
+    return $items;
   }
 
 }
