@@ -130,7 +130,21 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
               // Apply the weighting.
               foreach ($items as $item) {
                 $id = $item['html_url'];
+                // Adjust the weight.
                 $weights[$id] *= $weight['weight'];
+
+                // Adjust the assignee when set
+                // @todo Support options other than '=owner'
+                if (isset($weight['assignee'])) {
+                  if ($weight['assignee'] === '=owner') {
+                    $issues[$id]['assignee'] = $issues[$id]['user'];
+                  }
+                }
+
+                // Add suffix to the issue.
+                if (isset($weight['suffix'])) {
+                  $issues[$id]['title'] .= $weight['suffix'];
+                }
               }
             }
           }
@@ -239,9 +253,10 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
 
   private function getFilteredItems($conf, $issues, $filter, $repo = NULL) {
     $items = array();
+    $filter = trim($filter);
 
     // Process the filters
-    if (preg_match('@label:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+    if (preg_match('@^label:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Handle a basic label filter
       $items = array();
       foreach ($issues as $issue) {
@@ -254,7 +269,18 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
       }
       $this->output->writeln(sizeof($items) . " results for basic label '$filter'");
     }
-    elseif (preg_match('@milestone:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+    elseif (preg_match('@^no:\s*milestone$@s', $filter, $arr)) {
+      // Handle a basic milestone filter
+      $items = array();
+      foreach ($issues as $issue) {
+        if (!isset($issue['milestone']) || empty($issue['milestone']['title'])) {
+          $items[] = $issue;
+        }
+      }
+      $this->output->writeln(sizeof($items)
+        . " results for no milestone '$filter'");
+    }
+    elseif (preg_match('@^milestone:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Handle a basic milestone filter
       $items = array();
       foreach ($issues as $issue) {
@@ -266,7 +292,18 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
       $this->output->writeln(sizeof($items)
         . " results for basic milestone '$filter'");
     }
-    elseif (preg_match('@assignee:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+    elseif (preg_match('@^no:\s*assignee$@s', $filter, $arr)) {
+      // Handle a basic milestone filter
+      $items = array();
+      foreach ($issues as $issue) {
+        if (!isset($issue['assignee']) || empty($issue['assignee']['login'])) {
+          $items[] = $issue;
+        }
+      }
+      $this->output->writeln(sizeof($items)
+        . " results for no assignee '$filter'");
+    }
+    elseif (preg_match('@^assignee:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Handle a basic milestone filter
       $items = array();
       foreach ($issues as $issue) {
