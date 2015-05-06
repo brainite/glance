@@ -130,6 +130,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
               // Apply the weighting.
               foreach ($items as $item) {
                 $id = $item['html_url'];
+
                 // Adjust the weight.
                 $weights[$id] *= $weight['weight'];
 
@@ -145,6 +146,11 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
                 if (isset($weight['suffix'])) {
                   $issues[$id]['title'] .= $weight['suffix'];
                 }
+
+                // Add the debug output
+                if ($output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
+                  $output->writeln(sprintf("   %0.1f % 6d %s", round($weights[$id], 1), $item['number'], $issues[$id]['title']));
+                }
               }
             }
           }
@@ -153,6 +159,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
           foreach ($weights as &$weight) {
             $weight = round($weight, 1);
           }
+          unset($weight);
 
           // Sort the ids by weight and then by issue title.
           $ids = array_keys($weights);
@@ -191,7 +198,13 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
           if ($weight <= 1 || !isset($visible_issues[$id])) {
             continue;
           }
-          $link = (++$i) . ". [" . $issues[$id]['title'] . "]("
+          if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+            $output->writeln(sprintf("   %0.1f % 6d %s", round($weight, 1), $issues[$id]['number'], $issues[$id]['title']));
+          }
+          // Add the bullet.
+          $bullet = ++$i;
+          $bullet = 1;
+          $link = "$bullet. [" . $issues[$id]['title'] . "]("
             . $issues[$id]['html_url'] . ")";
           $contents .= $link . "\n";
           // echo $weight . ' = ' . $link . "\n";
@@ -254,20 +267,22 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
   private function getFilteredItems($conf, $issues, $filter, $repo = NULL) {
     $items = array();
     $filter = trim($filter);
+    $msgs = array();
 
     // Process the filters
     if (preg_match('@^label:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Handle a basic label filter
+      $find = trim($arr[1], '"');
       $items = array();
       foreach ($issues as $issue) {
         foreach ($issue['labels'] as $label) {
-          if (strcasecmp($arr[1], $label['name']) === 0) {
+          if (strcasecmp($find, $label['name']) === 0) {
             $items[] = $issue;
             break;
           }
         }
       }
-      $this->output->writeln(sizeof($items) . " results for basic label '$filter'");
+      $msgs[] = sizeof($items) . " results for basic label '$filter'";
     }
     elseif (preg_match('@^no:\s*milestone$@s', $filter, $arr)) {
       // Handle a basic milestone filter
@@ -277,8 +292,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
           $items[] = $issue;
         }
       }
-      $this->output->writeln(sizeof($items)
-        . " results for no milestone '$filter'");
+      $msgs[] = sizeof($items) . " results for no milestone '$filter'";
     }
     elseif (preg_match('@^milestone:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Handle a basic milestone filter
@@ -289,8 +303,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
           $items[] = $issue;
         }
       }
-      $this->output->writeln(sizeof($items)
-        . " results for basic milestone '$filter'");
+      $msgs[] = sizeof($items) . " results for basic milestone '$filter'";
     }
     elseif (preg_match('@^no:\s*assignee$@s', $filter, $arr)) {
       // Handle a basic milestone filter
@@ -300,8 +313,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
           $items[] = $issue;
         }
       }
-      $this->output->writeln(sizeof($items)
-        . " results for no assignee '$filter'");
+      $msgs[] = sizeof($items) . " results for no assignee '$filter'";
     }
     elseif (preg_match('@^assignee:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Handle a basic milestone filter
@@ -312,14 +324,19 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
           $items[] = $issue;
         }
       }
-      $this->output->writeln(sizeof($items)
-        . " results for basic assignee '$filter'");
+      $msgs[] = sizeof($items) . " results for basic assignee '$filter'";
     }
     else {
       // If this is not handled internally, use the search.
       $filter = "$conf[filter] $filter";
       $items = $this->getAllItems($filter, $repo);
-      $this->output->writeln(sizeof($items) . " results for '$filter'");
+      $msgs[] = sizeof($items) . " results for '$filter'";
+    }
+
+    if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_NORMAL) {
+      foreach ($msgs as $msg) {
+        $this->output->writeln($msg);
+      }
     }
     return $items;
   }
