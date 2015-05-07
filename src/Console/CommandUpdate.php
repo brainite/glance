@@ -144,7 +144,9 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
 
                 // Add suffix to the issue.
                 if (isset($weight['suffix'])) {
-                  $issues[$id]['title'] .= $weight['suffix'];
+                  $issues[$id]['title'] .= strtr($weight['suffix'], array(
+                    '{{due}}' => $issues[$id]['due'],
+                  ));
                 }
 
                 // Add the debug output
@@ -244,10 +246,12 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
         $fileInfo = $client->api('repo')->contents()->create($output_user, $output_repo, $conf['output']['path'], $contents, $commitMessage, $conf['output']['branch'], $committer);
       }
       else {
-        $output->writeln("GitHub exception (" . $e->getCode() . "): " . $e->getMessage());
+        $output->writeln("GitHub exception (" . $e->getCode() . "): "
+          . $e->getMessage());
       }
     } catch (\Exception $e) {
-      $output->writeln("GitHub exception (" . $e->getCode() . "): " . $e->getMessage());
+      $output->writeln("GitHub exception (" . $e->getCode() . "): "
+        . $e->getMessage());
       $output->writeln(get_class($e));
       return;
     }
@@ -264,13 +268,50 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
     return (array) $results['items'];
   }
 
-  private function getFilteredItems($conf, $issues, $filter, $repo = NULL) {
+  private function getFilteredItems($conf, &$issues, $filter, $repo = NULL) {
     $items = array();
     $filter = trim($filter);
     $msgs = array();
 
     // Process the filters
-    if (preg_match('@^label:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+    if (preg_match('@^due:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+      // Custom glance syntax:
+      // due:"* .. *"
+      $match = $arr[1];
+      $from = NULL;
+      $until = NULL;
+      if (preg_match('@^(.*) \.\. (.*)$@s', trim($match, '" '), $arr)) {
+        if (trim($arr[1]) === '*') {
+          $from = '0000-00-00';
+        }
+        else {
+          $from = strftime('%Y-%m-%d', strtotime($arr[1]));
+        }
+        if (trim($arr[2]) === '*') {
+          $until = '3000-00-00';
+        }
+        else {
+          $until = strftime('%Y-%m-%d', strtotime($arr[2]));
+        }
+      }
+      $items = array();
+      foreach ($issues as &$issue) {
+        if (preg_match("@due(?::\s*|\s+)(.*?)(?:\n|$)@is", $issue['body'], $arr)) {
+          $tgt = strtotime($arr[1]);
+          if ($tgt == 0) {
+            continue;
+          }
+          $tgt = strftime('%Y-%m-%d', $tgt);
+          if ($tgt >= $from && $tgt <= $until) {
+            $issue['due'] = $tgt;
+            $items[] = $issue;
+          }
+        }
+      }
+      unset($issue);
+      $msgs[] = sizeof($items) . " results for glance due filter '$filter'";
+    }
+    elseif (preg_match('@^label:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Handle a basic label filter
       $find = trim($arr[1], '"');
       $items = array();
