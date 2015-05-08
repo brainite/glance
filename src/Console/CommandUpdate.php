@@ -145,7 +145,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
                 // Add suffix to the issue.
                 if (isset($weight['suffix'])) {
                   $issues[$id]['title'] .= strtr($weight['suffix'], array(
-                    '{{due}}' => $issues[$id]['due'],
+                    '{{due}}' => isset($issues[$id]['due']) ? $issues[$id]['due'] : '',
                   ));
                 }
 
