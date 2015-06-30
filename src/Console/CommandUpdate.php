@@ -337,10 +337,11 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
     }
     elseif (preg_match('@^milestone:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Handle a basic milestone filter
+      $find_milestone = trim($arr[1], "\" ");
       $items = array();
       foreach ($issues as $issue) {
         if (isset($issue['milestone'])
-          && strcasecmp($arr[1], $issue['milestone']['title']) === 0) {
+          && strcasecmp($find_milestone, $issue['milestone']['title']) === 0) {
           $items[] = $issue;
         }
       }
