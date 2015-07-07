@@ -106,10 +106,12 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
         if (isset($conf['inherit_from'])) {
           $issues = $cache[$conf['inherit_from']]['issues'];
           $weights = $cache[$conf['inherit_from']]['weights'];
+          $headings = $cache[$conf['inherit_from']]['headings'];
         }
         else {
           $issues = array();
           $weights = array();
+          $headings = array();
 
           foreach ($conf['repos'] as $repo) {
             list($search_user, $search_repo) = explode('/', $repo, 2);
@@ -149,6 +151,11 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
                   ));
                 }
 
+                // Add the issue to a heading.
+                if (isset($weight['heading'])) {
+                  $headings[$id] = $weight['heading'];
+                }
+
                 // Add the debug output
                 if ($output->getVerbosity() >= OutputInterface::VERBOSITY_DEBUG) {
                   $output->writeln(sprintf("   %0.1f % 6d %s", round($weights[$id], 1), $item['number'], $issues[$id]['title']));
@@ -178,6 +185,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
           $cache[$conf_id] = array(
             'issues' => $issues,
             'weights' => $weights,
+            'headings' => $headings,
           );
         }
 
@@ -195,6 +203,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
         else {
           $visible_issues = $issues;
         }
+        $sections = array();
         foreach ($ids as $id) {
           $weight = $weights[$id];
           if ($weight <= 1 || !isset($visible_issues[$id])) {
@@ -208,8 +217,19 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
           $bullet = 1;
           $link = "$bullet. [" . $issues[$id]['title'] . "]("
             . $issues[$id]['html_url'] . ")";
-          $contents .= $link . "\n";
+          if (isset($headings[$id]) && trim($headings[$id]) !== '') {
+            if (!isset($sections[$headings[$id]])) {
+              $sections[$headings[$id]] = '';
+            }
+            $sections[$headings[$id]] .= $link . "\n";
+          }
+          else {
+            $contents .= $link . "\n";
+          }
           // echo $weight . ' = ' . $link . "\n";
+        }
+        foreach ($sections as $heading => $content) {
+          $contents .= "\n$heading\n" . str_repeat('-', strlen($heading)) . "\n\n" . $content;
         }
 
         // Add headers/footers.
