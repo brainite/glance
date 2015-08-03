@@ -123,6 +123,7 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
               $issues[$id] = $item;
               $weights[$id] = 1;
             }
+            $output->writeln(sizeof($items) . " issues loaded from $repo");
 
             // Debug, if requested.
             if (isset($conf['debug'])) {
@@ -288,13 +289,18 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
 
   private function getAllItems($filter = 'is:open', $repo) {
     static $api = NULL;
+    static $pager = NULL;
     if (!isset($api)) {
       $api = $this->client->api('search');
-      $api->setPerPage(1000);
+      $api->setPerPage(100);
+      $pager = new \Github\ResultPager($this->client);
     }
 
-    $results = $api->issues("repo:$repo $filter");
-    return (array) $results['items'];
+    // Fetch all items.
+    $items = (array) $pager->fetchAll($api, 'issues', array(
+      "repo:$repo $filter",
+    ));
+    return $items;
   }
 
   private function getFilteredItems($conf, &$issues, $filter, $repo = NULL) {
