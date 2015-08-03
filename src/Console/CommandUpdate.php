@@ -124,6 +124,15 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
               $weights[$id] = 1;
             }
 
+            // Debug, if requested.
+            if (isset($conf['debug'])) {
+              foreach ($this->getFilteredItems($conf, $issues, $conf['debug'], $repo) as $item) {
+                $output->writeln("<error>DEBUG: $conf[debug]</error>");
+                var_export($item);
+              }
+              return;
+            }
+
             // Process the weights.
             foreach ($conf['weights'] as $weight) {
               $filter = trim(strtr($weight['filter'], $tr));
@@ -294,7 +303,16 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
     $msgs = array();
 
     // Process the filters
-    if (preg_match('@^due:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+    if (preg_match('@^\d+$@s', $filter)) {
+      $items = array();
+      foreach ($issues as $issue) {
+        if ($issue['number'] == $filter) {
+          $items[] = $issue;
+        }
+      }
+      $msgs[] = sizeof($items) . " results for glance due filter '$filter'";
+    }
+    elseif (preg_match('@^due:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Custom glance syntax:
       // due:"* .. *"
       $match = $arr[1];
