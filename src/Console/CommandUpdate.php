@@ -401,12 +401,13 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
       }
       $msgs[] = sizeof($items) . " results for no assignee '$filter'";
     }
-    elseif (preg_match('@^assignee:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
+    elseif (preg_match('@^(|-)assignee:("[^"]+"|[^ ]+)$@s', $filter, $arr)) {
       // Handle a basic milestone filter
       $items = array();
+      $found = ($arr[1] !== '-');
       foreach ($issues as $issue) {
-        if (isset($issue['assignee'])
-          && strcasecmp($arr[1], $issue['assignee']['login']) === 0) {
+        if ((!$found && !isset($issue['assignee'])) || isset($issue['assignee'])
+          && (strcasecmp($arr[2], $issue['assignee']['login']) === 0) === $found) {
           $items[] = $issue;
         }
       }
