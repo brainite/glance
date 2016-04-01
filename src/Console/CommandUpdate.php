@@ -161,6 +161,13 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
                   ));
                 }
 
+                // Add prefix to the issue.
+                if (isset($weight['prefix'])) {
+                  $issues[$id]['title'] = strtr($weight['prefix'], array(
+                    '{{due}}' => isset($issues[$id]['due']) ? $issues[$id]['due'] : '',
+                  )) . $issues[$id]['title'];
+                }
+
                 // Add the issue to a heading.
                 if (isset($weight['heading'])) {
                   $headings[$id] = $weight['heading'];
