@@ -224,6 +224,9 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
         foreach ($ids as $id) {
           $weight = $weights[$id];
           if ($weight <= 1 || !isset($visible_issues[$id])) {
+            if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERY_VERBOSE) {
+              $output->writeln(sprintf("   %0.1f % 6d %s", round($weight, 1), $issues[$id]['number'], $issues[$id]['title']));
+            }
             continue;
           }
           if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
