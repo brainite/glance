@@ -17,6 +17,7 @@ class Application extends \Symfony\Component\Console\Application {
     // Identify all of the available glance console commands.
     $cmds = array(
       new CommandUpdate(),
+      new CommandAnalytics(),
     );
 
     // Add the commands after eliminating the implicit glance namespace.
