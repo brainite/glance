@@ -157,14 +157,16 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
                 // Add suffix to the issue.
                 if (isset($weight['suffix'])) {
                   $issues[$id]['title'] .= strtr($weight['suffix'], array(
-                    '{{due}}' => isset($issues[$id]['due']) ? $issues[$id]['due'] : '',
+                    '{{due}}' => isset($issues[$id]['due']) ? $issues[$id]['due']
+                      : '',
                   ));
                 }
 
                 // Add prefix to the issue.
                 if (isset($weight['prefix'])) {
                   $issues[$id]['title'] = strtr($weight['prefix'], array(
-                    '{{due}}' => isset($issues[$id]['due']) ? $issues[$id]['due'] : '',
+                    '{{due}}' => isset($issues[$id]['due']) ? $issues[$id]['due']
+                      : '',
                   )) . $issues[$id]['title'];
                 }
 
@@ -224,7 +226,8 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
         foreach ($ids as $id) {
           $weight = $weights[$id];
           if ($weight <= 1 || !isset($visible_issues[$id])) {
-            if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERY_VERBOSE) {
+            if ($output->getVerbosity()
+              >= OutputInterface::VERBOSITY_VERY_VERBOSE) {
               $output->writeln(sprintf("   %0.1f % 6d %s", round($weight, 1), $issues[$id]['number'], $issues[$id]['title']));
             }
             continue;
@@ -249,7 +252,8 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
           // echo $weight . ' = ' . $link . "\n";
         }
         foreach ($sections as $heading => $content) {
-          $contents .= "\n$heading\n" . str_repeat('-', strlen($heading)) . "\n\n" . $content;
+          $contents .= "\n$heading\n" . str_repeat('-', strlen($heading))
+            . "\n\n" . $content;
         }
 
         // Add headers/footers.
@@ -284,6 +288,14 @@ class CommandUpdate extends \Symfony\Component\Console\Command\Command {
     } catch (\Github\Exception\RuntimeException $e) {
       if ($e->getCode() == 404) {
         $fileInfo = $client->api('repo')->contents()->create($output_user, $output_repo, $conf['output']['path'], $contents, $commitMessage, $conf['output']['branch'], $committer);
+      }
+      elseif ($e->getCode() == 409) {
+        $output->writeln("GitHub exception (" . $e->getCode() . "): "
+          . $e->getMessage());
+        $output->writeln("If this error recurs, it could indicate a repo issue on GitHub.");
+        $output->writeln("Check out your repo, make a small edit to "
+          . $conf['output']['path']
+          . ", commit, and push it. Then attempt the glance update again.");
       }
       else {
         $output->writeln("GitHub exception (" . $e->getCode() . "): "
