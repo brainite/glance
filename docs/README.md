@@ -49,11 +49,11 @@ defaults:
     # Due next 4 days: add due date
     - filter: due:"+1 day .. +4 days"
       weight: 5
-      suffix: " __(due _{{ "{{" }}due{{ "}}" }}_)__"
+      suffix: " __(due _{{ "{{" }}due}}_)__"
     # Due next week: add due date
     - filter: due:"+5 days .. +11 days"
       weight: 2
-      suffix: " _(due {{ "{{" }}due{{ "}}" }})_"
+      suffix: " _(due {{ "{{" }}due}})_"
     # Due 46+ days: hide
     - filter: due:"+46 days .. *"
       weight: 0
@@ -71,29 +71,29 @@ defaults:
       weight: 1.5
     # Prioritize only when in the current month.
     # Thus, the label "idle-10" would hide an issue until October.
-    - filter: label:idle-{{ "{{" }}month{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month}}
       weight: 10
-    - filter: label:idle-{{ "{{" }}month_1{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_1}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_2{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_2}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_3{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_3}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_4{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_4}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_5{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_5}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_6{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_6}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_7{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_7}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_8{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_8}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_9{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_9}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_10{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_10}}
       weight: 0
-    - filter: label:idle-{{ "{{" }}month_11{{ "}}" }}
+    - filter: label:idle-{{ "{{" }}month_11}}
       weight: 0
     # Prioritize a milestone and move under a heading
     - filter: milestone:"Beta"
