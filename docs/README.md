@@ -2,6 +2,9 @@
 
 Static dashboard reports for GitHub issues
 
+**No longer maintained.**
+After using glance reliably for 9 years, we transitioned to a new system in 2023.
+
 ## Basic Usage
 
 ```sh
